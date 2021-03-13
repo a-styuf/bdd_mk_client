@@ -15,10 +15,12 @@ class OaiDDChannel:
             f"{self.channel_num}: U ЦАП, В",
             f"{self.channel_num}: U дд, В",
             f"{self.channel_num}: I дд, мА",
-            f"{self.channel_num}: I_mean, мА",
-            f"{self.channel_num}: I пост.вр., с",
             f"{self.channel_num}: R дд, Ом",
+            f"{self.channel_num}: U_mean, мА",
+            f"{self.channel_num}: I_mean, мА",
             f"{self.channel_num}: R_mean, Ом",
+            f"{self.channel_num}: U пост.вр., с",
+            f"{self.channel_num}: I пост.вр., с",
             f"{self.channel_num}: R пост.вр., с",
         ]
         self.data_list = ["0" for i in range(len(self.name_list))]
@@ -36,7 +38,8 @@ class OaiDDChannel:
         #
         if self.graph_data is None:
             self.init_graph_data()
-        self.create_graph_data()
+        if self.find_value(self.name_list[0], parcing_result) != 0:
+            self.create_graph_data()
         pass
 
     @staticmethod
@@ -135,7 +138,7 @@ class BddDevice:
         self.ta1.send_to_rt(self.mko_a, self.settings_fr_sa, data, 32)
         pass
 
-    def set_oai_dd_filter(self, channel=1, time_const_R=1.0, time_const_I=1.0):
+    def set_oai_dd_filter(self, channel=1, time_const_R=1.0, time_const_I=1.0, time_const_U=1.0):
         """
         oai_dd filter setting for ouput values
         :param channel: number of dd channel (1, 2)
@@ -152,6 +155,7 @@ class BddDevice:
             raise(ValueError, "Incorrect channel number")
         data[6] = int(time_const_R * 256) & 0xFFFF
         data[7] = int(time_const_I * 256) & 0xFFFF
+        data[8] = int(time_const_U * 256) & 0xFFFF
         self.ta1.send_to_rt(self.mko_a, self.settings_fr_sa, data, 32)
         pass
 
@@ -159,8 +163,8 @@ class BddDevice:
         """
         oai_dd pid settings for resistance and current
         :param channel: number of dd channel (1, 2)
-        :param R_desired: desired resistance value
-        :param I_desired: desired сгккуте value
+        :param R_desired: desired resistance value [Ohm]
+        :param I_desired: desired current value [mA]
         :param PID_R: coefficients for resistance regulation
         :param PID_I: coefficients for resistance regulation
         :return: nothing
@@ -175,7 +179,7 @@ class BddDevice:
             raise(ValueError, "Incorrect channel number")
         #
         data[6] = int(R_desired * 256)
-        data[7] = int(I_desired * 256 * 1000)
+        data[7] = int(I_desired * 256)
         #
         if PID_R is None:
             PID_R = [1.0, 0.005, 0.0]

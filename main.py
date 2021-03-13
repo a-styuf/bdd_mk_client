@@ -136,6 +136,7 @@ class MainWindow(QtWidgets.QMainWindow, main_win.Ui_main_win):
             #
             time_const_R = self.constTimeResOAIDD1SpinBox.value()
             time_const_I = self.constTimeCurrOAIDD1SpinBox.value()
+            time_const_U = self.constTimeCurrOAIDD2SpinBox.value()
         elif channel == 2:
             if self.buttonGroup_2.checkedButton().text() == "Отключен":
                 mode = 0x00
@@ -157,11 +158,12 @@ class MainWindow(QtWidgets.QMainWindow, main_win.Ui_main_win):
             #
             time_const_R = self.constTimeResOAIDD2SpinBox.value()
             time_const_I = self.constTimeCurrOAIDD2SpinBox.value()
+            time_const_U = self.constTimeCurrOAIDD2SpinBox.value()
         else:
             raise (ValueError, "Incorrect mode parameter")
         ##
         self.bdd.set_oai_dd_mode(channel=channel, mode=mode)
-        self.bdd.set_oai_dd_filter(channel=channel, time_const_R=time_const_R, time_const_I=time_const_I)
+        self.bdd.set_oai_dd_filter(channel=channel, time_const_R=time_const_R, time_const_I=time_const_I, time_const_U=time_const_U)
         self.bdd.set_oai_dd_pid(channel=channel, R_desired=des_res, I_desired=des_curr, PID_R=PID_R, PID_I=PID_I)
         pass
 

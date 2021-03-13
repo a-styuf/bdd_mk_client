@@ -60,11 +60,13 @@ def frame_parcer(frame):
                         data.append(["%d: U ЦАП, В" % (i+1), "%.3f" % val_from(frame, 2 * 8 + i*rs, 2, byteorder=b_order, k=1/256)])
                         data.append(["%d: U дд, В" % (i+1), "%.3f" % val_from(frame, 2 * 9 + i*rs, 2, byteorder=b_order, k=1/256)])
                         data.append(["%d: I дд, мА" % (i+1), "%.3f" % val_from(frame, 2 * 10 + i*rs, 2, byteorder=b_order, k=1/256)])
-                        data.append(["%d: I_mean, мА" % (i + 1), "%.3f" % val_from(frame, 2 * 11 + i * rs, 2, byteorder=b_order, k=1 / 256)])
-                        data.append(["%d: I пост.вр., с" % (i + 1), "%.3f" % val_from(frame, 2 * 12 + i * rs, 2, byteorder=b_order, k=1 / 256)])
-                        data.append(["%d: R дд, Ом" % (i+1), "%.3f" % val_from(frame, 2 * 13 + i*rs, 2, byteorder=b_order, k=1/256)])
+                        data.append(["%d: R дд, Ом" % (i+1), "%.3f" % val_from(frame, 2 * 11 + i*rs, 2, byteorder=b_order, k=1/256)])
+                        data.append(["%d: U_mean, мА" % (i + 1), "%.3f" % val_from(frame, 2 * 12 + i * rs, 2, byteorder=b_order, k=1 / 256)])
+                        data.append(["%d: I_mean, мА" % (i + 1), "%.3f" % val_from(frame, 2 * 13 + i * rs, 2, byteorder=b_order, k=1 / 256)])
                         data.append(["%d: R_mean, Ом" % (i + 1), "%.3f" % val_from(frame, 2 * 14 + i * rs, 2, byteorder=b_order, k=1 / 256)])
-                        data.append(["%d: R пост.вр., с" % (i + 1), "%.3f" % val_from(frame, 2 * 15 + i * rs, 2, byteorder=b_order, k=1 / 256)])
+                        data.append(["%d: U пост.вр., с" % (i + 1), "%.3f" % val_from(frame, 2 * 15 + i * rs, 2, byteorder=b_order, k=1 / 256)])
+                        data.append(["%d: I пост.вр., с" % (i + 1), "%.3f" % val_from(frame, 2 * 16 + i * rs, 2, byteorder=b_order, k=1 / 256)])
+                        data.append(["%d: R пост.вр., с" % (i + 1), "%.3f" % val_from(frame, 2 * 17 + i * rs, 2, byteorder=b_order, k=1 / 256)])
                     #
                     pass
                 else:
