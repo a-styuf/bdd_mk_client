@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 import ta1_mko
 import oai_data_parcer
+import pfiffer_data
+import time
 
 
 class OaiDDChannel:
     def __init__(self, channel_num=1):
         self.channel_num = channel_num
         self.name_list = [
-            f"Ввремя, с",
             f"{self.channel_num}: Режим",
             f"{self.channel_num}: Статус",
             f"{self.channel_num}: P дд, мм рт.ст.",
@@ -24,8 +25,7 @@ class OaiDDChannel:
             f"{self.channel_num}: R пост.вр., с",
         ]
         self.data_list = ["0" for i in range(len(self.name_list))]
-        self.graph_data = None
-        self.max_graph_len = 10000
+
         #
         self.row_frame = [0 for i in range(64)]
         pass
@@ -35,11 +35,6 @@ class OaiDDChannel:
         parcing_result = oai_data_parcer.frame_parcer(frame=self.row_frame)
         for num, name in enumerate(self.name_list):
             self.data_list[num] = self.find_value(name, parcing_result)
-        #
-        if self.graph_data is None:
-            self.init_graph_data()
-        if self.find_value(self.name_list[0], parcing_result) != 0:
-            self.create_graph_data()
         pass
 
     @staticmethod
@@ -53,27 +48,6 @@ class OaiDDChannel:
         except Exception as error:
             print(error, str_var)
         return 0
-
-    def create_graph_data(self):
-        """
-        Creation of data with following format
-            vis_data_list = [
-                ["Время_0, с", data_list],
-                ["Данные_1, ЕИ", data_list],
-                ....
-                ["Данные_N, ЕИ", data_list]
-            ]
-        :return: nothing
-        """
-        for num, pair in enumerate(self.graph_data):
-            pair[1].append(self._get_number_from_str(self.data_list[num]))
-            while len(pair) >= self.max_graph_len:
-                pair[1].pop(0)
-        pass
-
-    def init_graph_data(self):
-        self.graph_data = [[name, [self._get_number_from_str(self.data_list[i])]]
-                           for i, name in enumerate(self.name_list)]
 
     @staticmethod
     def find_value(name, parcing_result):
@@ -91,6 +65,8 @@ class BddDevice:
         self.ta1 = ta1_mko.Device()
         self.ta1.init()
         #
+        self.pfiffer = pfiffer_data.Pfiffer()
+        #
         self.sys_fr_sa = 15
         self.dd_fr_sa = 1
         self.settings_fr_sa = 30
@@ -101,7 +77,9 @@ class BddDevice:
         self.bdd_sys_parsed_data = []
         #
         self.bdd_dd_frame = [0x00 for i in range(32)]
-        self.oai_dd_channel = [OaiDDChannel(channel_num=num) for num in range(1, 3)]
+        self.oai_dd_channels = [OaiDDChannel(channel_num=num) for num in range(1, 3)]
+        self.oai_dd_graph_data = None
+        self.oai_dd_graph_max_len = 10000
         #
         pass
 
@@ -112,12 +90,70 @@ class BddDevice:
 
     def get_dd_frame(self):
         self.bdd_dd_frame = self.ta1.read_from_rt(self.mko_a, self.dd_fr_sa, 32)
-        for oai_dd in self.oai_dd_channel:
-            oai_dd.parcing(self.bdd_dd_frame)
         if self.bdd_dd_frame[1] == 0xFEFE:
             self.ta1.disconnect()
             self.ta1.connect()
+        else:
+            for oai_dd in self.oai_dd_channels:
+                oai_dd.parcing(self.bdd_dd_frame)
+                self.create_graph_data(mode="oai_dd")
         pass
+
+    def create_graph_data(self, mode="oai_dd"):
+        """
+        Creation of data with following format
+            vis_data_list = [
+                ["Время_0, с", data_list],
+                ["Данные_1, ЕИ", data_list],
+                ....
+                ["Данные_N, ЕИ", data_list]
+            ]
+        :return: nothing
+        """
+        if mode == "oai_dd":
+            if self.oai_dd_graph_data is None:
+                self.init_graph_data(mode=mode)
+            for num, pair in enumerate(self.oai_dd_graph_data):
+                if num == 0:
+                    self.oai_dd_graph_data[0][1].append(int(time.perf_counter()))
+                else:
+                    for box in [self.oai_dd_channels[0], self.oai_dd_channels[1], self.pfiffer]:
+                        data_to_append = self._get_data_from_name(pair[0], box.name_list, box.data_list)
+                        if data_to_append:
+                            pair[1].append(self._get_number_from_str(data_to_append))
+        # print(self.oai_dd_graph_data)
+        pass
+
+    @staticmethod
+    def _get_data_from_name(name, names=None, dates=None):
+        if names and dates:
+            for number, var_name in enumerate(names):
+                if var_name == name:
+                    return dates[number]
+        return None
+
+    @staticmethod
+    def _get_number_from_str(str_var):
+        try:
+            try:
+                number = float(str_var)
+            except ValueError:
+                number = int(str_var, 16)
+            return number
+        except Exception as error:
+            print(error, str_var)
+        return 0
+
+    def init_graph_data(self, mode="oai_dd"):
+        if mode == "oai_dd":
+            self.oai_dd_graph_data = []
+            self.oai_dd_graph_data.append(["Время, с", [time.perf_counter()]])
+            for channel in self.oai_dd_channels:
+                self.oai_dd_graph_data.extend([[name, [self._get_number_from_str(channel.data_list[i])]]
+                                               for i, name in enumerate(channel.name_list)])
+            for num in range(len(self.pfiffer.name_list)):
+                name, data = self.pfiffer.name_list[num], self.pfiffer.data_list[num]
+                self.oai_dd_graph_data.append([name, [data]])
 
     def set_oai_dd_mode(self, channel=1, mode=0x00):
         """
@@ -194,13 +230,17 @@ class BddDevice:
 
     def get_log_data(self, mode="data"):
         ret_str = ""
-        for channel in self.oai_dd_channel:
-            if mode == "title":
-                ret_str += ";".join(channel.name_list)
-            elif mode == "data":
-                ret_str += ";".join(channel.data_list)
-            else:
-                raise(ValueError, "Incorrect <mode> parameter")
+        if mode == "title":
+            for channel in self.oai_dd_channels:
+                ret_str += "; ".join(channel.name_list)
+            ret_str += "; ".join(self.pfiffer.name_list)
+        elif mode == "data":
+            for channel in self.oai_dd_channels:
+                ret_str += "; ".join(channel.data_list)
+            ret_str += "; ".join(self.pfiffer.data_list)
+            ret_str = ret_str.replace(".", ",")
+        else:
+            raise(ValueError, "Incorrect <mode> parameter")
         return ret_str + "\n"
 
     def __repr__(self):
@@ -213,6 +253,6 @@ if __name__ == '__main__':  # Если мы запускаем файл напр
     bdd.get_sys_frame()
     print(bdd.bdd_sys_parsed_data)
     bdd.get_dd_frame()
-    print(bdd.oai_dd_channel[0].data_list)
-    print(bdd.oai_dd_channel[1].data_list)
+    print(bdd.oai_dd_channels[0].data_list)
+    print(bdd.oai_dd_channels[1].data_list)
 

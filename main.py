@@ -9,6 +9,7 @@ import configparser
 import os
 import data_vis
 import bdd_data
+import pfiffer_data
 
 
 class MainWindow(QtWidgets.QMainWindow, main_win.Ui_main_win):
@@ -53,28 +54,28 @@ class MainWindow(QtWidgets.QMainWindow, main_win.Ui_main_win):
         self.fill_table()
         # отправка данных в график
         if self.graph_window.isVisible():
-            self.graph_window.set_graph_data(self.bdd.oai_dd_channel[0].graph_data + self.bdd.oai_dd_channel[1].graph_data)
+            self.graph_window.set_graph_data(self.bdd.oai_dd_graph_data)
         # сохранение данных в лог
         self.log_file.write(self.bdd.get_log_data(mode="data"))
         pass
 
     def init_table(self):
         self.dataOAIDD1TableWidget.setColumnCount(2)
-        self.dataOAIDD1TableWidget.setRowCount(len(self.bdd.oai_dd_channel[0].name_list))
+        self.dataOAIDD1TableWidget.setRowCount(len(self.bdd.oai_dd_channels[0].name_list))
         self.dataOAIDD2TableWidget.setColumnCount(2)
-        self.dataOAIDD2TableWidget.setRowCount(len(self.bdd.oai_dd_channel[1].name_list))
+        self.dataOAIDD2TableWidget.setRowCount(len(self.bdd.oai_dd_channels[1].name_list))
         pass
 
     def fill_table(self):
         self.init_table()
         # first channel
-        for row in range(len(self.bdd.oai_dd_channel[0].name_list)):
-            self.__fill_single_socket(self.dataOAIDD1TableWidget, row, 0, self.bdd.oai_dd_channel[0].name_list[row])
-            self.__fill_single_socket(self.dataOAIDD1TableWidget, row, 1, self.bdd.oai_dd_channel[0].data_list[row])
+        for row in range(len(self.bdd.oai_dd_channels[0].name_list)):
+            self.__fill_single_socket(self.dataOAIDD1TableWidget, row, 0, self.bdd.oai_dd_channels[0].name_list[row])
+            self.__fill_single_socket(self.dataOAIDD1TableWidget, row, 1, self.bdd.oai_dd_channels[0].data_list[row])
         # second channel
-        for row in range(len(self.bdd.oai_dd_channel[1].name_list)):
-            self.__fill_single_socket(self.dataOAIDD2TableWidget, row, 0, self.bdd.oai_dd_channel[1].name_list[row])
-            self.__fill_single_socket(self.dataOAIDD2TableWidget, row, 1, self.bdd.oai_dd_channel[1].data_list[row])
+        for row in range(len(self.bdd.oai_dd_channels[1].name_list)):
+            self.__fill_single_socket(self.dataOAIDD2TableWidget, row, 0, self.bdd.oai_dd_channels[1].name_list[row])
+            self.__fill_single_socket(self.dataOAIDD2TableWidget, row, 1, self.bdd.oai_dd_channels[1].data_list[row])
 
     @staticmethod
     def __fill_single_socket(table, row, column, value, color=None):
@@ -101,8 +102,8 @@ class MainWindow(QtWidgets.QMainWindow, main_win.Ui_main_win):
 
     # graph
     def restart_graph(self):
-        self.bdd.oai_dd_channel[0].init_graph_data()
-        self.bdd.oai_dd_channel[1].init_graph_data()
+        self.bdd.oai_dd_channels[0].init_graph_data()
+        self.bdd.oai_dd_channels[1].init_graph_data()
         pass
 
     def open_graph_window(self):
