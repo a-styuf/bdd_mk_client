@@ -52,6 +52,8 @@ class Device:
         self.command_word = 0x0000
         #
         self.ta1_lib = windll.LoadLibrary(os.path.abspath(os.path.join(os.path.dirname(__file__), "WDMTMKv2.dll")))
+        #
+        self.debug = False
 
     def init(self):
         #
@@ -167,6 +169,7 @@ class Device:
         for i in range(2, 2+leng):
             word = self.ta1_lib.bcgetw(i)
             frame.append(word)
+        self.dbg_print("Read from RT: " + " ".join([("%04X" % var) for var in frame]))
         return frame
 
     def print_base(self):
@@ -175,6 +178,12 @@ class Device:
             print_str += "%04X " % self.ta1_lib.bcgetw(i)
         print(print_str)
         pass
+
+    def dbg_print(self, dbg_str):
+        if self.debug:
+            print(dbg_str)
+        else:
+            pass
 
 
 class PollingProgram:

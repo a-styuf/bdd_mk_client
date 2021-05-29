@@ -445,7 +445,7 @@ class Widget(QtWidgets.QWidget, data_vis_widget.Ui_dataVisWidgetOName):
             if num == 0:
                 table_item = QtWidgets.QTableWidgetItem("%d" % data[-1])
             else:
-                table_item = QtWidgets.QTableWidgetItem("%.3g" % data[-1])
+                table_item = QtWidgets.QTableWidgetItem("%.4g" % data[-1])
             self.dataTableTWidget.setItem(num, 3, table_item)
 
     def get_data_names(self):

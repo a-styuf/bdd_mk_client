@@ -57,16 +57,38 @@ def frame_parcer(frame):
                         data.append(["%d: Статус" % (i+1), "0x%02X" % val_from(frame, 2 * 5 + 1 + i*rs, 1, byteorder=b_order)])
                         data.append(["%d: P дд, мм рт.ст." % (i+1), "%.2E" % val_from(frame, 2 * 6 + i*rs, 2, byteorder=b_order)])
                         data.append(["%d: T, °C." % (i+1), "%.2f" % val_from(frame, 2 * 7 + i*rs, 2, byteorder=b_order, k=1/256)])
-                        data.append(["%d: U ЦАП, В" % (i+1), "%.3f" % val_from(frame, 2 * 8 + i*rs, 2, byteorder=b_order, k=1/256)])
-                        data.append(["%d: U дд, В" % (i+1), "%.3f" % val_from(frame, 2 * 9 + i*rs, 2, byteorder=b_order, k=1/256)])
+                        data.append(["%d: U ЦАП, В" % (i+1), "%.3f" % val_from(frame, 2 * 8 + i*rs, 2, byteorder=b_order, k=1/2560)])
+                        data.append(["%d: U дд, В" % (i+1), "%.3f" % val_from(frame, 2 * 9 + i*rs, 2, byteorder=b_order, k=1/2560)])
                         data.append(["%d: I дд, мА" % (i+1), "%.3f" % val_from(frame, 2 * 10 + i*rs, 2, byteorder=b_order, k=1/256)])
                         data.append(["%d: R дд, Ом" % (i+1), "%.3f" % val_from(frame, 2 * 11 + i*rs, 2, byteorder=b_order, k=1/256)])
-                        data.append(["%d: U_mean, мА" % (i + 1), "%.3f" % val_from(frame, 2 * 12 + i * rs, 2, byteorder=b_order, k=1 / 256)])
+                        data.append(["%d: U_mean, мА" % (i + 1), "%.3f" % val_from(frame, 2 * 12 + i * rs, 2, byteorder=b_order, k=1 / 2560)])
                         data.append(["%d: I_mean, мА" % (i + 1), "%.3f" % val_from(frame, 2 * 13 + i * rs, 2, byteorder=b_order, k=1 / 256)])
                         data.append(["%d: R_mean, Ом" % (i + 1), "%.3f" % val_from(frame, 2 * 14 + i * rs, 2, byteorder=b_order, k=1 / 256)])
                         data.append(["%d: U пост.вр., с" % (i + 1), "%.3f" % val_from(frame, 2 * 15 + i * rs, 2, byteorder=b_order, k=1 / 256)])
                         data.append(["%d: I пост.вр., с" % (i + 1), "%.3f" % val_from(frame, 2 * 16 + i * rs, 2, byteorder=b_order, k=1 / 256)])
                         data.append(["%d: R пост.вр., с" % (i + 1), "%.3f" % val_from(frame, 2 * 17 + i * rs, 2, byteorder=b_order, k=1 / 256)])
+                    #
+                    pass
+                elif 0x4463 == val_from(frame, 2, 2, byteorder=b_order):  # БДД_МК кадр с подробными данными
+                    data.append(["Метка кадра", "0x%04X" % val_from(frame, 0 * 2, 2, byteorder=b_order)])
+                    data.append(["Определитель", "0x%04X" % val_from(frame, 1 * 2, 2, byteorder=b_order)])
+                    data.append(["Ввремя, с", "%d" % val_from(frame, 3 * 2, 4, byteorder=b_order)])
+                    # oai dd 1 and 2
+                    offset = 10
+                    data.append(["Cостояние, hex", "0x%02X" % val_from(frame, offset + 0, 1, byteorder=b_order)])
+                    data.append(["Режим, hex", "0x%02X" % val_from(frame, offset + 1, 1, byteorder=b_order)])
+                    data.append(["Давление, мм рт.ст", "%.2E" % val_from(frame, offset + 2, 2, byteorder=b_order)])
+                    data.append(["Ток, А", "%.2E" % val_from(frame, offset + 4, 2, byteorder=b_order)])
+                    data.append(["Температура, °С", "%.1f" % (val_from(frame, offset + 6, 2, byteorder=b_order)/256)])
+                    data.append(["U изм, В", "%.3f" % (val_from(frame, offset + 8, 2, byteorder=b_order, signed=True)/1000)])
+                    data.append(["КУ", "%d" % (val_from(frame, offset + 10, 2, byteorder=b_order) & 0xFF)])
+                    data.extend([("%d: Upr, В" % i, "%.3f" % (val_from(frame, offset + 12 + i*2, 2, byteorder=b_order, signed=True)/1000)) for i in range(4)])
+                    data.extend([("%d: Umeas, В" % i, "%.3f" % (val_from(frame, offset + 20 + i*2, 2, byteorder=b_order, signed=True)/1000)) for i in range(4)])
+                    data.extend([("%d: Uzero, В" % i, "%.3f" % (val_from(frame, offset + 28 + i*2, 2, byteorder=b_order, signed=True)/1000)) for i in range(4)])
+                    data.append(["U HV, V", "%.1f" % (val_from(frame, offset + 36, 2, byteorder=b_order))])
+                    data.append(["I 24, mA", "%.1f" % (val_from(frame, offset + 38, 2, byteorder=b_order)/256)])
+                    data.append(["U hv_fb, V", "%.3f" % (val_from(frame, offset + 40, 2, byteorder=b_order)/256)])
+                    data.append(["HV PWM", "%d" % (val_from(frame, offset + 42, 2, byteorder=b_order))])
                     #
                     pass
                 else:

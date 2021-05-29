@@ -29,6 +29,13 @@ class MainWindow(QtWidgets.QMainWindow, main_win.Ui_main_win):
         # ОАИ ДД #
         self.setParamOAIDD1PushButton.clicked.connect(self.set_settings_oaidd_channeel_1)
         self.setParamOAIDD2PushButton.clicked.connect(self.set_settings_oaidd_channeel_2)
+        # ИМД #
+        self.autoModePButton.clicked.connect(self.bdd_ims_auto_mode_set)
+        self.manualModePButton.clicked.connect(self.bdd_ims_manual_mode_set)
+        self.calibrModePButton.clicked.connect(self.bdd_ims_calibr_mode_set)
+        self.ims_ku_RButtons = [self.KU1RButton, self.KU10RButton, self.KU100RButton, self.KU1000RButton]
+        for r_button in self.ims_ku_RButtons:
+            r_button.clicked.connect(self.bdd_ims_set_ku)
         #
         self.config = None
         self.config_file = None
@@ -42,6 +49,7 @@ class MainWindow(QtWidgets.QMainWindow, main_win.Ui_main_win):
         #
         self.DataUpdateTimer = QtCore.QTimer()
         self.DataUpdateTimer.timeout.connect(self.data_update_process)
+        self.data_request_var = 0
         self.DataUpdateTimer.start(1000)
         # ## Общие ## #
         self.logsUpdatePButt.clicked.connect(self.recreate_log_files)
@@ -50,24 +58,32 @@ class MainWindow(QtWidgets.QMainWindow, main_win.Ui_main_win):
 
     # общие
     def data_update_process(self):
-        self.bdd.get_dd_frame()
-        self.fill_table()
+        # запросы данных
+        data_request_list = [self.bdd.get_dd_frame, self.bdd.get_ims_frame]
+        for num, request in enumerate(data_request_list):
+            if num == (self.data_request_var % len(data_request_list)):
+                request()
+        self.data_request_var += 1
+        #
+        self.oai_fill_table()
+        self.ims_fill_table()
         # отправка данных в график
-        if self.graph_window.isVisible():
-            self.graph_window.set_graph_data(self.bdd.oai_dd_graph_data)
+        if self.graph_window.isVisible() and self.bdd.bdd_graph_data:
+            self.graph_window.set_graph_data(self.bdd.bdd_graph_data)
         # сохранение данных в лог
         self.log_file.write(self.bdd.get_log_data(mode="data"))
         pass
 
-    def init_table(self):
+   # oai_dd
+    def oai_init_table(self):
         self.dataOAIDD1TableWidget.setColumnCount(2)
         self.dataOAIDD1TableWidget.setRowCount(len(self.bdd.oai_dd_channels[0].name_list))
         self.dataOAIDD2TableWidget.setColumnCount(2)
         self.dataOAIDD2TableWidget.setRowCount(len(self.bdd.oai_dd_channels[1].name_list))
         pass
 
-    def fill_table(self):
-        self.init_table()
+    def oai_fill_table(self):
+        self.oai_init_table()
         # first channel
         for row in range(len(self.bdd.oai_dd_channels[0].name_list)):
             self.__fill_single_socket(self.dataOAIDD1TableWidget, row, 0, self.bdd.oai_dd_channels[0].name_list[row])
@@ -76,6 +92,19 @@ class MainWindow(QtWidgets.QMainWindow, main_win.Ui_main_win):
         for row in range(len(self.bdd.oai_dd_channels[1].name_list)):
             self.__fill_single_socket(self.dataOAIDD2TableWidget, row, 0, self.bdd.oai_dd_channels[1].name_list[row])
             self.__fill_single_socket(self.dataOAIDD2TableWidget, row, 1, self.bdd.oai_dd_channels[1].data_list[row])
+
+    # ims_dd
+    def ims_init_table(self):
+        self.dataIMSTableWidget.setColumnCount(2)
+        self.dataIMSTableWidget.setRowCount(len(self.bdd.ims_dd_channel.name_list))
+        pass
+
+    def ims_fill_table(self):
+        self.ims_init_table()
+        #
+        for row in range(len(self.bdd.ims_dd_channel.name_list)):
+            self.__fill_single_socket(self.dataIMSTableWidget, row, 0, self.bdd.ims_dd_channel.name_list[row])
+            self.__fill_single_socket(self.dataIMSTableWidget, row, 1, self.bdd.ims_dd_channel.data_list[row])
 
     @staticmethod
     def __fill_single_socket(table, row, column, value, color=None):
@@ -102,8 +131,7 @@ class MainWindow(QtWidgets.QMainWindow, main_win.Ui_main_win):
 
     # graph
     def restart_graph(self):
-        self.bdd.oai_dd_channels[0].init_graph_data()
-        self.bdd.oai_dd_channels[1].init_graph_data()
+        self.bdd.init_graph_data()
         pass
 
     def open_graph_window(self):
@@ -173,6 +201,34 @@ class MainWindow(QtWidgets.QMainWindow, main_win.Ui_main_win):
 
     def set_settings_oaidd_channeel_2(self):
         self.set_settings(channel=2)
+
+    # IMS #
+    def bdd_ims_auto_mode_set(self):
+        self.bdd.set_ims_mode(mode="auto")
+        pass
+
+    def bdd_ims_manual_mode_set(self):
+        self.bdd.set_ims_mode(mode="manual")
+        pass
+
+    def bdd_ims_calibr_mode_set(self):
+        self.bdd.set_ims_mode(mode="calibr")
+        pass
+
+    def bdd_ims_set_ku(self):
+        for r_button in self.ims_ku_RButtons:
+            if r_button.isChecked():
+                if r_button.text() == "1":
+                    self.bdd.set_ims_ku(ku=0)
+                elif r_button.text() == "10":
+                    self.bdd.set_ims_ku(ku=1)
+                elif r_button.text() == "100":
+                    self.bdd.set_ims_ku(ku=2)
+                elif r_button.text() == "1000":
+                    self.bdd.set_ims_ku(ku=3)
+                else:
+                    pass
+        pass
 
     # LOGs #
     @staticmethod

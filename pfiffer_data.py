@@ -58,28 +58,29 @@ class Pfiffer:
                 answer_list = answer_str.split(",")
             except UnicodeDecodeError as error:
                 print(error)
-            if len(answer_list[0]) != 0:
-                if answer_list[0] == "\x15":
-                    state1 = -1
-                    state2 = -1
-                else:
-                    try:
-                        state1 = int(answer_list[0])
-                        state2 = int(answer_list[2])
-                        pr1 = float(answer_list[1].strip())
-                        self.data_list[0] = "%02E" % pr1
-                        pr2 = float(answer_list[3].strip().split("\r")[0])
-                        self.data_list[1] = "%02E" % pr1
-
-                    except:
+            if answer_list:
+                if len(answer_list[0]) != 0:
+                    if answer_list[0] == "\x15":
                         state1 = -1
                         state2 = -1
-                        pass
-                self.pfiffer1_state = self.state_def(state1)
-                self.pfiffer2_state = self.state_def(state2)
-            else:
+                    else:
+                        try:
+                            state1 = int(answer_list[0])
+                            state2 = int(answer_list[2])
+                            pr1 = float(answer_list[1].strip())
+                            self.data_list[0] = "%02E" % pr1
+                            pr2 = float(answer_list[3].strip().split("\r")[0])
+                            self.data_list[1] = "%02E" % pr1
+
+                        except:
+                            state1 = -1
+                            state2 = -1
+                            pass
+                    self.pfiffer1_state = self.state_def(state1)
+                    self.pfiffer2_state = self.state_def(state2)
+                else:
+                    pass
                 pass
-            pass
         pass
 
     @staticmethod

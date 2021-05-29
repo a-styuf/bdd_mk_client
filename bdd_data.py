@@ -57,6 +57,54 @@ class OaiDDChannel:
         return "0"
 
 
+class ImsDDChannel:
+    def __init__(self):
+        self.name_list = [
+            "Cостояние, hex",
+            "Режим, hex",
+            "Давление, мм рт.ст",
+            "Ток, А",
+            "Температура, °С",
+            "U изм, В",
+            "КУ",
+            "0: Upr, В", "1: Upr, В", "2: Upr, В", "3: Upr, В",
+            "0: Uzero, В", "1: Uzero, В", "2: Uzero, В", "3: Uzero, В",
+            "0: Umeas, В", "1: Umeas, В", "2: Umeas, В", "3: Umeas, В",
+            "U HV, V",
+            "I 24, mA"
+        ]
+        self.data_list = ["0" for i in range(len(self.name_list))]
+        #
+        self.row_frame = [0 for i in range(64)]
+        pass
+
+    def parcing(self, frame):
+        self.row_frame = frame
+        parcing_result = oai_data_parcer.frame_parcer(frame=self.row_frame)
+        for num, name in enumerate(self.name_list):
+            self.data_list[num] = self.find_value(name, parcing_result)
+        pass
+
+    @staticmethod
+    def _get_number_from_str(str_var):
+        try:
+            try:
+                number = float(str_var)
+            except ValueError:
+                number = int(str_var, 16)
+            return number
+        except Exception as error:
+            print(error, str_var)
+        return 0
+
+    @staticmethod
+    def find_value(name, parcing_result):
+        for value_pair in parcing_result:
+            if name in value_pair[0]:
+                return value_pair[1]
+        return "0"
+
+
 class BddDevice:
     def __init__(self, *args, **kwargs):
         self.state = 0
@@ -69,17 +117,23 @@ class BddDevice:
         #
         self.sys_fr_sa = 15
         self.dd_fr_sa = 1
+        self.ims_fr_sa = 2
         self.settings_fr_sa = 30
         #
         if self.ta1 is None:
             self.state = -1
-        self.bdd_sys_frame = []
+        self.bdd_sys_frame = [0x00 for i in range(32)]
         self.bdd_sys_parsed_data = []
-        #
-        self.bdd_dd_frame = [0x00 for i in range(32)]
+        # oai dd
+        self.oai_dd_frame = [0x00 for i in range(32)]
         self.oai_dd_channels = [OaiDDChannel(channel_num=num) for num in range(1, 3)]
-        self.oai_dd_graph_data = None
-        self.oai_dd_graph_max_len = 10000
+        #
+        self.ims_dd_frame = [0x00 for i in range(32)]
+        self.ims_dd_channel = ImsDDChannel()
+        #
+        self.bdd_graph_data = None
+        self.bdd_graph_max_len = 10000
+        self.bdd_graph_box_list = [self.oai_dd_channels[0], self.oai_dd_channels[1], self.ims_dd_channel, self.pfiffer]
         #
         pass
 
@@ -88,18 +142,28 @@ class BddDevice:
         self.bdd_sys_parsed_data = oai_data_parcer.frame_parcer(self.bdd_sys_frame)
         pass
 
+    def get_ims_frame(self):
+        self.ims_dd_frame = self.ta1.read_from_rt(self.mko_a, self.ims_fr_sa, 32)
+        if self.ims_dd_frame[1] == 0xFEFE:
+            self.ta1.disconnect()
+            self.ta1.connect()
+        else:
+            self.ims_dd_channel.parcing(self.ims_dd_frame)
+            self.create_graph_data()
+        pass
+
     def get_dd_frame(self):
-        self.bdd_dd_frame = self.ta1.read_from_rt(self.mko_a, self.dd_fr_sa, 32)
-        if self.bdd_dd_frame[1] == 0xFEFE:
+        self.oai_dd_frame = self.ta1.read_from_rt(self.mko_a, self.dd_fr_sa, 32)
+        if self.oai_dd_frame[1] == 0xFEFE:
             self.ta1.disconnect()
             self.ta1.connect()
         else:
             for oai_dd in self.oai_dd_channels:
-                oai_dd.parcing(self.bdd_dd_frame)
-                self.create_graph_data(mode="oai_dd")
+                oai_dd.parcing(self.oai_dd_frame)
+                self.create_graph_data()
         pass
 
-    def create_graph_data(self, mode="oai_dd"):
+    def create_graph_data(self):
         """
         Creation of data with following format
             vis_data_list = [
@@ -110,18 +174,17 @@ class BddDevice:
             ]
         :return: nothing
         """
-        if mode == "oai_dd":
-            if self.oai_dd_graph_data is None:
-                self.init_graph_data(mode=mode)
-            for num, pair in enumerate(self.oai_dd_graph_data):
-                if num == 0:
-                    self.oai_dd_graph_data[0][1].append(int(time.perf_counter()))
-                else:
-                    for box in [self.oai_dd_channels[0], self.oai_dd_channels[1], self.pfiffer]:
-                        data_to_append = self._get_data_from_name(pair[0], box.name_list, box.data_list)
-                        if data_to_append:
-                            pair[1].append(self._get_number_from_str(data_to_append))
-        # print(self.oai_dd_graph_data)
+        if self.bdd_graph_data is None:
+            self.init_graph_data()
+        for num, pair in enumerate(self.bdd_graph_data):
+            if num == 0:
+                self.bdd_graph_data[0][1].append(int(time.perf_counter()))
+            else:
+                for box in self.bdd_graph_box_list:
+                    data_to_append = self._get_data_from_name(pair[0], box.name_list, box.data_list)
+                    if data_to_append:
+                        pair[1].append(self._get_number_from_str(data_to_append))
+        # print(self.bdd_graph_data)
         pass
 
     @staticmethod
@@ -144,16 +207,12 @@ class BddDevice:
             print(error, str_var)
         return 0
 
-    def init_graph_data(self, mode="oai_dd"):
-        if mode == "oai_dd":
-            self.oai_dd_graph_data = []
-            self.oai_dd_graph_data.append(["Время, с", [time.perf_counter()]])
-            for channel in self.oai_dd_channels:
-                self.oai_dd_graph_data.extend([[name, [self._get_number_from_str(channel.data_list[i])]]
-                                               for i, name in enumerate(channel.name_list)])
-            for num in range(len(self.pfiffer.name_list)):
-                name, data = self.pfiffer.name_list[num], self.pfiffer.data_list[num]
-                self.oai_dd_graph_data.append([name, [data]])
+    def init_graph_data(self):
+        self.bdd_graph_data = []
+        self.bdd_graph_data.append(["Время, с", [time.perf_counter()]])
+        for sourse in self.bdd_graph_box_list:
+            self.bdd_graph_data.extend([[name, [self._get_number_from_str(sourse.data_list[i])]]
+                                        for i, name in enumerate(sourse.name_list)])
 
     def set_oai_dd_mode(self, channel=1, mode=0x00):
         """
@@ -225,6 +284,29 @@ class BddDevice:
             data[8+i] = int(var * 256) & 0xFFFF
         for i, var in enumerate(PID_I):
             data[11+i] = int(var * 256) & 0xFFFF
+        self.ta1.send_to_rt(self.mko_a, self.settings_fr_sa, data, 32)
+        pass
+
+    def set_ims_mode(self, mode="auto"):
+        data = [0x0000 for i in range(32)]
+        data[0] = 0x0FF1
+        data[5] = 0x0008
+        if mode == "auto":
+            data[6] = 1
+        elif mode == "manual":
+            data[6] = 2
+        elif mode == "calibr":
+            data[6] = 3
+        else:
+            data[6] = 1
+        self.ta1.send_to_rt(self.mko_a, self.settings_fr_sa, data, 32)
+        pass
+
+    def set_ims_ku(self, ku=0):
+        data = [0x0000 for i in range(32)]
+        data[0] = 0x0FF1
+        data[5] = 0x0009
+        data[6] = ku & 0x03
         self.ta1.send_to_rt(self.mko_a, self.settings_fr_sa, data, 32)
         pass
 
